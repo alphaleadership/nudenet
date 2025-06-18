@@ -205,20 +205,32 @@ async function runDetection(input, output) {
 // main function
 async function main() {
   log.header();
-  const parser = new argparse.ArgumentParser({ description: 'nudenet' });
-  parser.add_argument('--model', '-m', { type: 'str', required: false, default: null, help: 'path to model' });
-  parser.add_argument('--input', '-i', { type: 'str', required: true, default: null, help: 'input image' });
-  parser.add_argument('--output', '-o', { type: 'str', required: false, default: null, help: 'output image' });
-  const args = parser.parse_args();
-  if (args.model) {
-    if (fs.existsSync(args.model)) {
-      if (fs.statSync(args.model).isDirectory()) options.modelPath = 'file://' + path.join(args.model, 'model.json');
-      else options.modelPath = 'file://' + args.model;
-    } else {
-      log.error('model not found:', args.model);
-      return;
-    }
-  }
+  const  argv  = require('yargs')
+    .option('model', {
+      alias: 'm',
+      describe: 'chemin du modèle',
+      type: 'string',
+      default: options.modelPath,
+    })
+    .option('input', {
+      alias: 'i',
+      describe: 'chemin de l\'image d\'entrée',
+      type: 'string',
+      demandOption: true,
+    })
+    .option('output', {
+      alias: 'o',
+      describe: 'chemin de l\'image de sortie',
+      type: 'string',
+      default: null,
+    })
+    .help()
+    .alias('help', 'h')
+    .version()
+    .parse();
+    console.log(argv);
+  const args = argv;
+
   await tf.enableProdMode();
   await tf.ready();
   await runDetection(args.input, args.output);

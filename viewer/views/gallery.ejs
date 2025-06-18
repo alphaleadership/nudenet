@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title><%= title %></title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .gallery-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .folder {
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .folder-header {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .image-item {
+            position: relative;
+            cursor: pointer;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .image-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .image-item:hover {
+            transform: scale(1.02);
+            transition: transform 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="gallery-container">
+        <h1><%= title %></h1>
+        
+        <% folders.forEach(folder => { %>
+            <div class="folder">
+                <div class="folder-header">
+                    <i class="arrow">▶</i>
+                    <%= folder.folder %>
+                </div>
+                <div class="folder-content">
+                    <div class="image-grid">
+                        <% folder.images.forEach(image => { %>
+                            <div class="image-item">
+                                <img src="<%= image %>" alt="<%= folder.folder %> image">
+                            </div>
+                        <% }); %>
+                    </div>
+                </div>
+            </div>
+        <% }); %>
+    </div>
+
+    <script>
+        // Function to unload images in a folder
+        function unloadImages(folder) {
+            const images = folder.querySelectorAll('.image-item img');
+            images.forEach(img => {
+                // Remove the src attribute to unload the image
+                img.src = '';
+                // Clear any cached data
+                img.src = null;
+                // Remove the image element
+                img.remove();
+            });
+        }
+
+        // Function to load images in a folder
+        function loadImages(folder, imagesData) {
+            const imageGrid = folder.querySelector('.image-grid');
+            imagesData.forEach(image => {
+                const imageItem = document.createElement('div');
+                imageItem.className = 'image-item';
+                const img = document.createElement('img');
+                img.src = image;
+                img.alt = folder.querySelector('.folder-header').textContent.trim();
+                img.addEventListener('click', function(e) {
+                    window.open(img.src);
+                });
+                imageItem.appendChild(img);
+                imageGrid.appendChild(imageItem);
+            });
+        }
+
+        // Store image data for each folder
+        let folderData = {};
+
+        // Initialize folder data and load images
+        document.querySelectorAll('.folder').forEach(folder => {
+            const folderName = folder.querySelector('.folder-header').textContent.trim();
+            const images = Array.from(folder.querySelectorAll('.image-item img'))
+                .map(img => img.src);
+            folderData[folderName] = images;
+            
+            // Collapse folder and unload images by default
+            folder.classList.add('collapsed');
+            unloadImages(folder);
+        });
+
+        // Add click handlers for folders and images
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle folder clicks
+            document.querySelectorAll('.folder-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    const folder = this.closest('.folder');
+                    const folderName = folder.querySelector('.folder-header').textContent.trim();
+                    const isCollapsed = folder.classList.contains('collapsed');
+
+                    // If collapsing, unload images
+                    if (!isCollapsed) {
+                        unloadImages(folder);
+                    }
+                    // If expanding, reload images
+                    else {
+                        loadImages(folder, folderData[folderName]);
+                    }
+                    
+                    folder.classList.toggle('collapsed');
+                });
+            });
+
+            // Handle image clicks
+            document.querySelectorAll('.image-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    const img = this.querySelector('img');
+                    window.open(img.src);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

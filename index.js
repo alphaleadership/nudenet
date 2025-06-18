@@ -51,7 +51,10 @@ function analyze(dir) {
         
           }
           console.log(`stdout: ${stdout}`);
-          console.error(`stderr: ${stderr}`);
+          if (stderr) {
+            fs.unlinkSync(`${dir}/${element}`);
+            console.error(`stderr: ${stderr}`);
+          }
           currentIndex++;
           runNextCommand();
         });
@@ -76,4 +79,4 @@ function protect(str) {
   return str.replace(/ /g, "\\ ");
 }
 
-analyze("d:\\perso\\img-test\\image\\cosplay");// replace with your storage path 
+analyze("./viewer/media");// replace with your storage path 

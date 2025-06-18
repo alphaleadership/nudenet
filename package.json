@@ -26,7 +26,8 @@
     "@tensorflow/tfjs-node": "^4.5.0",
     "@vladmandic/pilogger": "^0.4.8",
     "argparse": "^2.0.1",
-    "deduplicator-alphaleadershipv1": "^1.0.0"
+    "deduplicator-alphaleadershipv1": "^1.0.0",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@html-eslint/eslint-plugin": "^0.18.0",
