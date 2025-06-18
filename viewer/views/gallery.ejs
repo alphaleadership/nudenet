@@ -9,6 +9,107 @@
             padding: 20px;
             background-color: #f5f5f5;
         }
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+
+            z-index: 1000;
+        }
+        .modal-content {
+            position: sticky;
+            background-color: white;
+            margin: 50px auto;
+            padding: 20px;
+            width: 500px;
+            max-width: 90%;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .modal-title {
+            font-size: 1.5em;
+            color: #333;
+        }
+        .close-modal {
+            cursor: pointer;
+            font-size: 1.5em;
+            color: #666;
+        }
+        .close-modal:hover {
+            color: #333;
+        }
+        .modal-body {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .image-preview {
+            position: relative;
+            margin: 20px 0;
+        }
+        .image-preview img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 4px;
+        }
+        .delete-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #dc3545;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            transition: all 0.2s ease;
+        }
+        .delete-button:hover {
+            background-color: #c82333;
+            transform: scale(1.1);
+        }
+        .delete-icon {
+            font-size: 20px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .modal-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .modal-button.cancel {
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .modal-button.delete {
+            background-color: #dc3545;
+            color: white;
+        }
+        .modal-button:hover {
+            opacity: 0.9;
+        }
         .gallery-container {
             max-width: 1200px;
             margin: 0 auto;
@@ -51,7 +152,27 @@
 <body>
     <div class="gallery-container">
         <h1><%= title %></h1>
-        
+        <div id="deleteModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Confirmation</h2>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="image-preview">
+                        <img id="modalImage" src="" alt="Image preview">
+                        <button class="delete-button" style="display: none;">
+                            <i class="delete-icon">🗑️</i>
+                        </button>
+                    </div>
+                    <p id="modalMessage">Voulez-vous vraiment supprimer cette image ?</p>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-button cancel">Annuler</button>
+                    <button class="modal-button delete">Supprimer</button>
+                </div>
+            </div>
+        </div>
         <% folders.forEach(folder => { %>
             <div class="folder">
                 <div class="folder-header">
@@ -62,7 +183,12 @@
                     <div class="image-grid">
                         <% folder.images.forEach(image => { %>
                             <div class="image-item">
-                                <img src="<%= image %>" alt="<%= folder.folder %> image">
+                                <img 
+                                    src="<%= image %>" 
+                                    alt="<%= folder.folder %> image"
+                                    data-folder="<%= folder.folder %>"
+                                    data-image="<%= image %>"
+                                >
                             </div>
                         <% }); %>
                     </div>
@@ -71,50 +197,146 @@
         <% }); %>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+   
+
     <script>
+        // Initialize modal elements
+        let folderData = {};
+
+        const modal = document.getElementById('deleteModal');
+        const modalImage = modal.querySelector('#modalImage');
+        const deleteButton = modal.querySelector('.delete-button');
+        const deleteButton2 = modal.querySelector('.delete');
+        const cancelButton = modal.querySelector('.cancel');
+        const closeButton = modal.querySelector('.close-modal');
+
+        // Function to attach modal click handler to an image
+        function attachModalClickHandler(img, folder) {
+            const folderName = folder.querySelector('.folder-header').textContent.trim();
+           
+
+            img.closest('.image-item').addEventListener('click', function(e) {
+                // Show modal
+                modal.style.display = 'block';
+                const imagePath = img.getAttribute('data-src').split('/').pop();
+                // Set image preview
+                modalImage.src =img.getAttribute('data-src');
+                modalImage.style.display = 'block';
+                const folderName = img.getAttribute('data-src').split('/').slice(0, -1).pop();
+                // Show delete button on hover
+                deleteButton.style.display = 'none';
+                modalImage.addEventListener('mouseenter', () => {
+                    deleteButton.style.display = 'block';
+                });
+                modalImage.addEventListener('mouseleave', () => {
+                    deleteButton.style.display = 'none';
+                });
+
+                // Open image in new tab when clicked
+                modalImage.addEventListener('click', (e) => {
+                    if (e.target === modalImage) {
+                        window.open(modalImage.src, '_blank');
+                    }
+                });
+
+                // Delete image
+                [deleteButton, deleteButton2].forEach(button => {
+                    button.onclick = async function() {
+                        try {
+                            console.log(folderName, imagePath)
+                            const response = await fetch('/delete-image', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    folder: folderName,
+                                    image: imagePath
+                                })
+                            });
+
+                            if (response.ok) {
+                                // Remove image from DOM
+                                img.closest('.image-item').remove();
+                                // Close modal
+                                modal.style.display = 'none';
+                                // Update folder data if needed
+                                console.log(folderData)
+                                console.log(folderName)
+                                
+                                folderData[folderName] = folderData[folderName].filter(imgPath => imgPath !== imagePath);
+                            } else {
+                                throw new Error('Failed to delete image');
+                            }
+                        } catch (error) {
+                            console.error('Error deleting image:', error);
+                            alert('Erreur lors de la suppression de l\'image');
+                        }
+                    };
+                });
+            });
+        }
+
         // Function to unload images in a folder
         function unloadImages(folder) {
-            const images = folder.querySelectorAll('.image-item img');
-            images.forEach(img => {
-                // Remove the src attribute to unload the image
-                img.src = '';
-                // Clear any cached data
-                img.src = null;
-                // Remove the image element
-                img.remove();
-            });
+            const imageGrid = folder.querySelector('.image-grid');
+            // Clear all image elements without triggering load events
+            imageGrid.innerHTML = '';
         }
 
         // Function to load images in a folder
         function loadImages(folder, imagesData) {
             const imageGrid = folder.querySelector('.image-grid');
+            imageGrid.innerHTML = ''; // Clear existing content first
             imagesData.forEach(image => {
                 const imageItem = document.createElement('div');
                 imageItem.className = 'image-item';
                 const img = document.createElement('img');
-                img.src = image;
+                // Set data-src instead of src to prevent immediate loading
+                img.dataset.src = image;
                 img.alt = folder.querySelector('.folder-header').textContent.trim();
-                img.addEventListener('click', function(e) {
-                    window.open(img.src);
+              
+                // Load image only when visible
+                img.addEventListener('load', function() {
+                    this.style.opacity = '1';
+                });
+                img.addEventListener('error', function() {
+                    console.error('Error loading image:', img.dataset.src);
                 });
                 imageItem.appendChild(img);
                 imageGrid.appendChild(imageItem);
+
+                // Attach modal click handler
+                attachModalClickHandler(img, folder);
             });
+
+            // Load images progressively
+            setTimeout(() => {
+                const images = imageGrid.querySelectorAll('img');
+                images.forEach(img => {
+                    img.src = img.dataset.src;
+                });
+            }, 100);
         }
 
         // Store image data for each folder
-        let folderData = {};
-
+      
         // Initialize folder data and load images
         document.querySelectorAll('.folder').forEach(folder => {
             const folderName = folder.querySelector('.folder-header').textContent.trim();
             const images = Array.from(folder.querySelectorAll('.image-item img'))
                 .map(img => img.src);
-            folderData[folderName] = images;
-            
+            folderData[folderName.split("\n")[folderName.split("\n").length-1].trim()] = images;
+            console.log(folderData)
             // Collapse folder and unload images by default
             folder.classList.add('collapsed');
             unloadImages(folder);
+
+            // Attach modal handlers to existing images
+            folder.querySelectorAll('.image-item img').forEach(img => {
+                attachModalClickHandler(img, folder);
+            });
         });
 
         // Add click handlers for folders and images
@@ -132,18 +354,92 @@
                     }
                     // If expanding, reload images
                     else {
-                        loadImages(folder, folderData[folderName]);
+                        console.log(folderData[folderName.split("\n")[folderName.split("\n").length-1].trim()]);    
+                        loadImages(folder, folderData[folderName.split("\n")[folderName.split("\n").length-1].trim()]);
                     }
                     
                     folder.classList.toggle('collapsed');
                 });
             });
 
+            // Initialize modal
+            const modal = document.getElementById('deleteModal');
+            const modalImage = modal.querySelector('#modalImage');
+            const deleteButton = modal.querySelector('.delete-button');
+            const deleteButton2 = modal.querySelector('.delete');
+            const cancelButton = modal.querySelector('.cancel');
+            const closeButton = modal.querySelector('.close-modal');
+
+            // Setup modal close handlers
+            [cancelButton, closeButton].forEach(button => {
+                button.onclick = function() {
+                    modal.style.display = 'none';
+                };
+            });
+
+            // Close modal when clicking outside
+            window.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            };
+
             // Handle image clicks
             document.querySelectorAll('.image-item').forEach(item => {
+                const img = item.querySelector('img');
+                const folder = img.closest('.folder');
+                const folderName = folder.querySelector('.folder-header').textContent.trim();
+                const imagePath = img.src;
+
+                // Add click handler
                 item.addEventListener('click', function(e) {
-                    const img = this.querySelector('img');
-                    window.open(img.src);
+                    // Show modal
+                    modal.style.display = 'block';
+                    
+                    // Set image preview
+                    modalImage.src = img.src;
+                    modalImage.style.display = 'block';
+
+                    // Show delete button on hover
+                    deleteButton.style.display = 'none';
+                    modalImage.addEventListener('mouseenter', () => {
+                        deleteButton.style.display = 'block';
+                    });
+                    modalImage.addEventListener('mouseleave', () => {
+                        deleteButton.style.display = 'none';
+                    });
+
+                    // Delete image
+                    [deleteButton, deleteButton2].forEach(button => {
+                        button.onclick = async function() {
+                            try {
+                                const response = await fetch('/delete-image', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        folder: folderName,
+                                        image: imagePath
+                                    })
+                                });
+
+                                if (response.ok) {
+                                    // Remove image from DOM
+                                    item.remove();
+                                    // Close modal
+                                    modal.style.display = 'none';
+                                    // Update folder data if needed
+                                    folderData[folderName.split("\n")[folderName.split("\n").length-1].trim()] = folderData[folderName.split("\n")[folderName.split("\n").length-1].trim()].filter(imgPath => imgPath !== imagePath);
+                                } else {
+                                    throw new Error('Failed to delete image');
+                                }
+                            } catch (error) {
+                                console.error('Error deleting image:', error);
+                                alert('Erreur lors de la suppression de l\'image');
+                            }
+                        };
+                    });
                 });
             });
         });

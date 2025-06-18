@@ -296,6 +296,33 @@ router.get('/api/gallery', async (req, res) => {
   }
 });
 
+// Delete image route
+router.post('/delete-image', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const { folder, image } = req.body;
+    
+    if (!folder || !image) {
+      return res.status(400).json({ error: 'Folder and image are required' });
+    }
+
+    const imagePath = path.join(goodDirectory, folder, path.basename(image));
+    
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
+      logOperation('deleteImage', startTime, { image: imagePath });
+      res.json({ success: true });
+    } else {
+      logOperation('deleteImage_notFound', startTime, { image: imagePath });
+      res.status(404).json({ error: 'Image not found' });
+    }
+  } catch (err) {
+    console.error('Error deleting image:', err);
+    logOperation('deleteImage_error', startTime, { error: err.message });
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Image route
 router.get('/image/:position', (req, res) => {
   const startTime = Date.now();
