@@ -28,5 +28,12 @@ viewer/good/
 viewer/video/
 src/
 samples/
+# Log files
 viewer/logs/
 *.log
+**/*.log
+viewer/*.log
+src/*.log
+**/logs/**
+**/log/**
+**/*.log.*
