@@ -37,3 +37,7 @@ src/*.log
 **/logs/**
 **/log/**
 **/*.log.*
+viewer/categories.json
+viewer/combined.log
+viewer/downloads.json
+viewer/logs/operations_2025-06-18.log

@@ -2,8 +2,158 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-            const crypto = require('crypto');
+const crypto = require('crypto');
 const { exec } = require('child_process');
+const { findMatchingLinks } = require('../utils');
+const { getCategory, setCategory, removeCategory, loadCategories } = require('../categories');
+
+// Create category router
+const categoryRouter = express.Router();
+
+// Get category for an account
+categoryRouter.get('/:account', async (req, res) => {
+  try {
+    const account = req.params.account;
+    const category = await getCategory(account);
+    console.log(category);
+    res.json({ category });
+  } catch (error) {
+    console.error('Error getting category:', error);
+    res.status(500).json({ error: 'Error getting category' });
+  }
+});
+
+// Set category for an account
+categoryRouter.post('/:account', async (req, res) => {
+  try {
+    const account = req.params.account;
+    const { category } = req.body;
+    await setCategory(account, category);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error setting category:', error);
+    res.status(500).json({ error: 'Error setting category' });
+  }
+});
+
+// Remove category for an account
+categoryRouter.delete('/:account', async (req, res) => {
+  try {
+    const account = req.params.account;
+    await removeCategory(account);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error removing category:', error);
+    res.status(500).json({ error: 'Error removing category' });
+  }
+});
+
+// Mount category router
+router.use('/categorie', categoryRouter);
+
+// Add downloads directory
+const downloadsDir = path.join(__dirname, '../downloads');
+if (!fs.existsSync(downloadsDir)) {
+  fs.mkdirSync(downloadsDir, { recursive: true });
+}
+
+/**
+ * Saves image download information to JSON file
+ * @param {string} localPath - Local path where image was saved
+ * @param {string} originalLink - Original URL of the image
+ */
+function saveDownloadInfo(localPath, originalLink) {
+  const downloadsFile = path.join(__dirname, '../downloads.json');
+  let downloads = [];
+  
+  try {
+    if (fs.existsSync(downloadsFile)) {
+      const data = fs.readFileSync(downloadsFile, 'utf8');
+      downloads = JSON.parse(data).downloads;
+    }
+    
+    downloads.push({
+      localPath,
+      originalLink,
+      timestamp: new Date().toISOString(),
+      account: findMatchingLinks(originalLink)[0].fileName.split('.')[0]
+    });
+    
+    fs.writeFileSync(downloadsFile, JSON.stringify({ downloads }, null, 2));
+    logOperation('saveDownloadInfo', Date.now(), { localPath, originalLink });
+  } catch (err) {
+    console.error('Error saving download info:', err);
+    logOperation('saveDownloadInfo_error', Date.now(), { error: err.message });
+  }
+}
+
+/**
+ * Updates downloads.json when a file is moved
+ * @param {string} oldPath - Original file path
+ * @param {string} newPath - New file path
+ */
+function updateDownloadsOnMove(oldPath, newPath) {
+  const downloadsFile = path.join(__dirname, '../downloads.json');
+  try {
+    if (fs.existsSync(downloadsFile)) {
+      const data = fs.readFileSync(downloadsFile, 'utf8');
+      const downloads = JSON.parse(data).downloads;
+      
+      // Find and update the record with the old path
+      const updatedDownloads = downloads.map(download => {
+        console.log(download)
+        if (download.localPath === oldPath) {
+          return { ...download, localPath: newPath};
+        }else{
+          return { ...download };
+        }
+      });
+      
+      // Save the updated downloads
+      fs.writeFileSync(downloadsFile, JSON.stringify({ downloads: updatedDownloads }, null, 2));
+      logOperation('updateDownloadsOnMove', Date.now(), { 
+        oldPath, 
+        newPath 
+      });
+    }
+  } catch (err) {
+    console.error('Error updating downloads on move:', err);
+    logOperation('updateDownloadsOnMove_error', Date.now(), { 
+      error: err.message,
+      oldPath,
+      newPath
+    });
+  }
+}
+
+/**
+ * Removes an entry from downloads.json when a file is deleted
+ * @param {string} filePath - Path of the deleted file
+ */
+function removeDownloadEntry(filePath) {
+  const downloadsFile = path.join(__dirname, '../downloads.json');
+  try {
+    if (fs.existsSync(downloadsFile)) {
+      const data = fs.readFileSync(downloadsFile, 'utf8');
+      const downloads = JSON.parse(data).downloads;
+      
+      // Filter out the deleted file's entry
+      const updatedDownloads = downloads.filter(download => download.localPath !== filePath);
+      
+      // Save the updated downloads
+      fs.writeFileSync(downloadsFile, JSON.stringify({ downloads: updatedDownloads }, null, 2));
+      logOperation('removeDownloadEntry', Date.now(), { 
+        filePath 
+      });
+    }
+  } catch (err) {
+    console.error('Error removing download entry:', err);
+    logOperation('removeDownloadEntry_error', Date.now(), { 
+      error: err.message,
+      filePath
+    });
+  }
+}
 
 // Directory paths
 const imageDirectory = path.join(__dirname, '../media');
@@ -226,7 +376,29 @@ async function getGalleryData() {
       const folderPath = path.join(goodDirectory, folder);
       if ((await fs.promises.stat(folderPath)).isDirectory()) {
         const images = await fs.promises.readdir(folderPath);
-        const imagePaths = images.map(img => path.join('/good', folder, img));
+        const imagePaths = images.map(img => {
+          const fullPath = path.join(folderPath, img);
+          const originalLink = getOriginalLinkFromDownloads(fullPath);
+          const account = getAccountFromDownloads(fullPath);
+          return {
+            path: path.join('/good', folder, img),
+            originalLink: originalLink,
+            account: account
+          };
+        });
+
+        // Helper function to get account from downloads.json
+        function getAccountFromDownloads(filePath) {
+          try {
+            const downloadsPath = path.join(__dirname, '../downloads.json');
+            const downloadsData = JSON.parse(fs.readFileSync(downloadsPath, 'utf8'));
+            const download = downloadsData.downloads.find(d => d.localPath === filePath);
+            return download ? download.account : null;
+          } catch (error) {
+            console.error('Error reading downloads.json:', error);
+            return null;
+          }
+        }
         return { folder, images: imagePaths };
       }
       return null;
@@ -238,6 +410,18 @@ async function getGalleryData() {
   }
 }
 
+// Helper function to get original link from downloads.json
+function getOriginalLinkFromDownloads(filePath) {
+  try {
+    const downloadsPath = path.join(__dirname, '../downloads.json');
+    const downloadsData = JSON.parse(fs.readFileSync(downloadsPath, 'utf8'));
+    const download = downloadsData.downloads.find(d => d.localPath === filePath);
+    return download ? download.originalLink : null;
+  } catch (error) {
+    console.error('Error reading downloads.json:', error);
+    return null;
+  }
+}
 // CORS and cache control middleware
 router.all('*', (req, res, next) => {
   const startTime = Date.now();
@@ -263,6 +447,36 @@ router.get('/', (req, res) => {
   checkAndSwitchMode();
   res.render("index");
   logOperation('renderIndex', startTime, { mode });
+});
+
+// Slideshow route
+router.get('/slideshow/:dir', (req, res) => {
+  const startTime = Date.now();
+  checkAndSwitchMode();
+  const dir = decodeURIComponent(req.params.dir);
+  const dirPath = path.join(goodDirectory, dir);
+
+  try {
+    const files = fs.readdirSync(dirPath).filter(file => {
+      const ext = path.extname(file).toLowerCase();
+      return ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext);
+    }).join(',');
+
+    res.render("slideshow", { 
+      files, 
+      dir
+    });
+    logOperation('renderSlideshow', startTime, { 
+      dir, 
+      filesCount: files.length 
+    });
+  } catch (err) {
+    logOperation('renderSlideshow_error', startTime, { 
+      error: err.message,
+      dir
+    });
+    res.status(404).json({ error: 'Directory not found or error reading files' });
+  }
 });
 
 // Gallery route
@@ -295,6 +509,44 @@ router.get('/api/gallery', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+// Route to get current image for slideshow
+// No longer needed since we handle everything client-side
+// router.get('/slideshow/:files/current/:position', (req, res) => {
+//   const startTime = Date.now();
+//   try {
+//     const position = parseInt(req.params.position);
+//     const files = decodeURIComponent(req.params.files).split(',');
+//     
+//     if (position < 0 || position >= files.length) {
+//       res.status(404).json({ error: 'Position out of bounds' });
+//       return;
+//     }
+
+//     const currentFile = files[position];
+//     const imagePath = path.join(goodDirectory, currentFile);
+//     
+//     // Only send the current image path
+//     res.json({
+//       image: currentFile,
+//       position,
+//       total: files.length
+//     });
+//     
+//     logOperation('slideshow_current', startTime, { 
+//       position, 
+//       total: files.length
+//     });
+//   } catch (err) {
+//     logOperation('slideshow_error', startTime, { 
+//       error: err.message
+//     });
+//     res.status(500).json({ 
+//       error: 'Error fetching slideshow image', 
+//       details: err.message 
+//     });
+//   }
+// });
 
 // Delete image route
 router.post('/delete-image', async (req, res) => {
@@ -330,7 +582,7 @@ router.get('/image/:position', (req, res) => {
     const files = fs.readdirSync(imageDirectory).filter(file => {
       const fullPath = path.join(imageDirectory, file);
       return fs.statSync(fullPath).isFile();
-    });;
+    });
     const regroupedFiles = regroupFiles(files);
 
     if (!regroupedFiles || regroupedFiles.length === 0) {
@@ -338,17 +590,34 @@ router.get('/image/:position', (req, res) => {
       return res.status(404).send('No image found');
     }
 
-    const position = 0; // Always get first image
-    const imageName = regroupedFiles[position];
-    const imagePath = path.join(imageDirectory, imageName);
+    const position = parseInt(req.params.position);
+    console.log(position)
+    //console.table(regroupedFiles)
+    if (position >= 0 ) {
+      const selectedFile = regroupedFiles[0];
+      const filePath = path.join(imageDirectory, selectedFile);
+      
+      // Save download info if the request includes a download parameter
+      if (req.query.download) {
+        const originalLink = req.query.originalLink || `file://${filePath}`;
+        saveDownloadInfo(filePath, originalLink);
+      }
+      
+      // Set cache headers
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
 
-    // Set cache headers
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+      res.sendFile(filePath);
+      logOperation('image_served', startTime, { file: selectedFile });
+      logOperation('servingImage', startTime, { selectedFile});
+    } else {
+      res.status(404).send('Image not found');
+      logOperation('image_not_found', startTime, { position });
+    }
 
-    res.sendFile(imagePath);
-    logOperation('servingImage', startTime, { imageName });
+    //res.sendFile(imagePath);
+   
   } catch (err) {
     console.error('Error reading image directory:', err);
     logOperation('image_error', startTime, { error: err.message });
@@ -395,6 +664,9 @@ router.get('/move/:position/:groupe', (req, res) => {
       const newFileName = `${category}-${maxCount}${path.extname(imagePath)}`;
       const newPath = path.join(groupeDir, newFileName);
 
+      // Update downloads.json with the new path before moving the file
+      updateDownloadsOnMove(imagePath, newPath);
+      
       // Déplacer le fichier
       fs.renameSync(imagePath, newPath);
 
@@ -455,9 +727,10 @@ router.get('/move/:position/:groupe', (req, res) => {
       const existingCount = (fileCount[category] || 0) + 1;
       const newFileName = `${category}-${existingCount}.jpg`;
       const newFilePath = path.join(groupeDir, newFileName);
-
-      // Télécharger l'image
-      const curlCommand = `curl -o "${newFilePath}" "${link}"`;
+    
+      try {
+        saveDownloadInfo(newFilePath, link);
+        const curlCommand = `curl -o "${newFilePath}" "${link}"`;
       const curlStartTime = Date.now();
       exec(curlCommand, (error) => {
         if (error) {
@@ -475,9 +748,18 @@ router.get('/move/:position/:groupe', (req, res) => {
           });
         }
       });
-
+      
       linkManager.removeLink(link);
       fileCount[category] = existingCount;
+      } catch (error) {
+        
+      linkManager.removeLink(link);
+      fileCount[category] = existingCount;
+        console.error('Error saving download info:', error);
+      }
+      // Télécharger l'image
+      
+
 
       if (linkManager.getLinks().length === 0) {
         mode = 'image';
@@ -509,7 +791,7 @@ router.get('/delete/:position', (req, res) => {
       const files = fs.readdirSync(imageDirectory).filter(file => {
         const fullPath = path.join(imageDirectory, file);
         return fs.statSync(fullPath).isFile();
-      });;
+      });
       const regroupedFiles = regroupFiles(files);
 
       if (!regroupedFiles || regroupedFiles.length === 0) {
@@ -521,6 +803,8 @@ router.get('/delete/:position', (req, res) => {
       const imagePath = path.join(imageDirectory, imageName);
 
       if (fs.existsSync(imagePath)) {
+        // Remove the entry from downloads.json before deleting the file
+        removeDownloadEntry(imagePath);
         fs.unlinkSync(imagePath);
         logOperation('deleteImage', startTime, { imageName, imagePath });
       } else {
@@ -585,6 +869,8 @@ router.get('/imagedata/:position', (req, res) => {
         link: `/image/${regroupedFiles.length}`,
         alt: imageName,
         title: imageName,
+        account: findMatchingLinks(require("../downloads.json").downloads.filter((item) => item.localPath === imagePath)[0].originalLink)[0].fileName.split('.')[0],
+        originalLink: require("../downloads.json").downloads.filter((item) => item.localPath === imagePath)[0].originalLink
       };
       logOperation('getImageData', startTime, {
         imageName,
@@ -598,7 +884,7 @@ router.get('/imagedata/:position', (req, res) => {
         logOperation('imagedata_noLinkFound', startTime);
         return res.status(404).send('No link found');
       }
-
+      
       imageInfo = {
         nom: "Link",
         taille: link.length,
@@ -607,6 +893,8 @@ router.get('/imagedata/:position', (req, res) => {
         link: link,
         alt: "Link preview",
         title: 'Link',
+        account: findMatchingLinks(link)[0].fileName.split('.')[0],
+        originalLink: link
       };
       logOperation('getLinkData', startTime, {
         link,

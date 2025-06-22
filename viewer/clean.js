@@ -1,6 +1,29 @@
 const fs = require("fs");
 const path = require('path');
 
+/**
+ * Removes an entry from downloads.json when a file is deleted
+ * @param {string} filePath - Path of the deleted file
+ */
+function removeDownloadEntry(filePath) {
+  const downloadsFile = path.join(__dirname, 'downloads.json');
+  try {
+    if (fs.existsSync(downloadsFile)) {
+      const data = fs.readFileSync(downloadsFile, 'utf8');
+      const downloads = JSON.parse(data).downloads;
+      
+      // Filter out the deleted file's entry
+      const updatedDownloads = downloads.filter(download => download.localPath !== filePath);
+      
+      // Save the updated downloads
+      fs.writeFileSync(downloadsFile, JSON.stringify({ downloads: updatedDownloads }, null, 2));
+      console.log(`Removed download entry for: ${filePath}`);
+    }
+  } catch (err) {
+    console.error('Error removing download entry:', err);
+  }
+}
+
 // Définir le chemin prioritaire
 const PRIORITY_PATH = path.resolve("C:\\Users\\alpha\\ia\\viewer\\good");
 
@@ -148,6 +171,8 @@ const dedup = (...paths) => {
                             }
                             
                                     try {
+                            // Remove entry from downloads.json before deleting the file
+                            removeDownloadEntry(fileToDelete);
                             fs.unlinkSync(fileToDelete);
                             console.log(`${fileToDelete} est dupliquée de ${fileToKeep}`);
                                     } catch (error) {

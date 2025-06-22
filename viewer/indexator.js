@@ -1,6 +1,47 @@
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Updates the downloads.json file when an image is renamed
+ * @param {string} oldPath - Original file path
+ * @param {string} newPath - New file path
+ */
+function updateDownloadInfo(oldPath, newPath) {
+  const downloadsFile = path.join(__dirname, 'downloads.json');
+  try {
+    if (fs.existsSync(downloadsFile)) {
+      const data = fs.readFileSync(downloadsFile, 'utf8');
+      const downloads = JSON.parse(data).downloads;
+      
+      // Find and update the record with the old path
+      const updatedDownloads = downloads.map(download => {
+        if (download.localPath === oldPath) {
+          return { ...download, localPath: newPath };
+        }
+        return download;
+      });
+      
+      // Save the updated downloads
+      fs.writeFileSync(downloadsFile, JSON.stringify({ downloads: updatedDownloads }, null, 2));
+      console.log(`Updated downloads.json for: ${oldPath} -> ${newPath}`);
+    }
+  } catch (error) {
+    console.error('Error updating downloads.json:', error.message);
+  }
+}
+
+/**
+ * Updates downloads.json when renaming files in a directory
+ * @param {string} directoryPath - Path to the directory being renamed
+ * @param {string} oldName - Original file name
+ * @param {string} newName - New file name
+ */
+function updateDownloadsForRename(directoryPath, oldName, newName) {
+  const oldPath = path.join(directoryPath, oldName);
+  const newPath = path.join(directoryPath, newName);
+  updateDownloadInfo(oldPath, newPath);
+}
+
 function renameFiles(directoryPath) {
   try {
     // Créer un dossier temporaire
@@ -14,9 +55,10 @@ function renameFiles(directoryPath) {
     
     // Trier les fichiers pour maintenir l'ordre
     files.sort();
-    
+    let bfile=[]
     // Parcourir chaque fichier
     files.forEach((file, index) => {
+      bfile.push(file)
       const oldPath = path.join(directoryPath, file);
       
       // Ignorer le dossier temporaire
@@ -52,9 +94,23 @@ function renameFiles(directoryPath) {
 
     // Déplacer les fichiers du dossier temporaire vers le dossier principal
     const tempFiles = fs.readdirSync(tempDir);
-    tempFiles.forEach(file => {
+    tempFiles.forEach((file,index) => {
       const tempPath = path.join(tempDir, file);
       const newPath = path.join(directoryPath, file);
+      
+      // Find the original file name
+      const originalFile = files.find(f => 
+        f !== 'temp_rename' && 
+        f !== file && 
+        path.extname(f) === path.extname(file) && 
+        f.startsWith(file.split('-')[0])
+      );
+      console.log(originalFile)
+      if (originalFile) {
+        // Update downloads.json with the new path
+        updateDownloadsForRename(directoryPath, bfile[index], file);
+      }
+      
       fs.renameSync(tempPath, newPath);
     });
 

@@ -102,6 +102,40 @@
       min-width: 250px;
     }
 
+    .category-select {
+      margin: 15px 0;
+      padding: 10px;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid #00ff00;
+      border-radius: 5px;
+    }
+
+    .category-select input {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      background: rgba(0,0,0,0.8);
+      border: 1px solid #00ff00;
+      color: #00ff00;
+      border-radius: 4px;
+    }
+
+    .category-select button {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      background: rgba(0,0,0,0.8);
+      border: 1px solid #00ff00;
+      color: #00ff00;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .category-select button:hover {
+      background: #00ff00;
+      color: #000;
+    }
+
     .action-buttons {
       position: fixed;
       left: 50%;
@@ -203,7 +237,14 @@
   <div class="timer" id="timer"></div>
   
   <div class="user-panel">
-    <h3 class="panel-title">Profil Utilisateur</h3>
+    <h3 class="panel-title">Utilisateur</h3>
+    <p>Compte: <span id="current-account"></span></p>
+    <p>Mode: <span id="current-mode"></span></p>
+    <div class="category-select">
+
+      <button id="set-category">Sélectionner</button>
+      <p id="current-category" style="margin-top: 10px; color: #00ff00;"></p>
+    </div>
     <div id="user-info">
       <p>Session démarrée: <span id="session-time">0:00</span></p>
       <p>Vitesse moyenne: <span id="avg-speed">0</span> images/min</p>
@@ -220,7 +261,13 @@
 
   <div class="info-panel">
     <h3 class="panel-title">Informations Image</h3>
-    <div id="image-info"></div>
+    <div id="image-info">
+      <p>Compte: <span id="image-account">-</span></p>
+      <p>Chemin: <span id="image-path">-</span></p>
+      <p>Lien original: <a id="image-original-link" href="#" target="_blank">-</a></p>
+      <p>ID: <span id="image-id">-</span></p>
+      <p>Résolution: <span id="image-resolution">-</span></p>
+    </div>
     <div id="nombre-images-restantes">
       Images restantes: <span id="compteur-images">0</span>
     </div>
@@ -271,8 +318,43 @@ const state = {
     efficiency: 0,
     sessionDuration: 0
   },
-  category: null
+  category: null,
+  mode: 'image',
+  position: 0,
+  images: [],
+  groups: [],
+  currentCategory: null
 };
+const updateCategory = async () => {
+    const account = state.account;
+    console.log(account);
+    const category = state.category;
+    console.log(category);
+    if (account && category) {
+      try {
+        await fetch(`/categorie/${account}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ category })
+        });
+        state.currentCategory = category;
+        document.getElementById('current-category').textContent = `Catégorie actuelle: ${category}`;
+      } catch (error) {
+        console.error('Error setting category:', error);
+      }
+    }
+  };
+// Category selection
+document.getElementById('set-category').onclick = async () => {
+  const account = document.getElementById('current-account').textContent;
+  const category = state.category;
+  if (account && category) {
+    await updateCategory();
+  }
+};
+
 // Interception du formulaire de groupe
 document.addEventListener('DOMContentLoaded', function() {
   const groupForm = document.getElementById('group-form');
@@ -300,7 +382,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
-
 
 // Mise à jour des statistiques utilisateur
 function updateUserStats() {
@@ -355,17 +436,57 @@ function updateImages() {
       updateImageInfo(data);
       state.stats.totalImages = data.nb;
       document.getElementById('compteur-images').textContent = data.nb;
-      
+    })
+    .catch(error => {
+      console.error('Erreur lors du chargement de l\'image:', error);
+      // Supprimer l'image actuelle
+      const currentImage = document.getElementById('current-image');
+      currentImage.src = '';
+      // Effectuer la suppression via API
+      fetch(`/delete/${state.currentId}`, {
+        method: 'DELETE'
+      })
+      .then(response => {
+        if (!response.ok) {
+          console.error('Erreur lors de la suppression:', response.status);
+        }
+      })
+      .catch(deleteError => {
+        console.error('Erreur lors de la suppression:', deleteError);
+      })
+      .finally(() => {
+        // Passer à l'image suivante
+        state.currentId++;
+navigateImage(1);
+      });
     })
     .catch(console.error);
 }
 
-function updateImageInfo(data) {
+async function updateImageInfo(imageData) {
   document.getElementById('image-info').innerHTML = `
-    <p>Catégorie: ${data.alt.split('-')[0]}</p>
+    <p>Catégorie: ${imageData.alt.split('-')[0]}</p>
+    compte: <p id="current-account">  ${imageData.account||'-'}</p>
+    <p>chemin: ${imageData.path||'-'}</p>
+    <p>lien original: <a id="image-original-link" href="${imageData.originalLink||'-'}" target="_blank">-</a></p>
     <p>ID: ${state.currentId}</p>
-    <p>Résolution: ${data.width || 'N/A'} x ${data.height || 'N/A'}</p>
+    <p>Résolution: ${imageData.width || 'N/A'} x ${imageData.height || 'N/A'}</p>
   `;
+  state.account = imageData.account;
+  // Check and set existing category for the account
+  if (state.account) {
+    try {
+      const response = await fetch(`/categorie/${state  .account}`);
+      const data = await response.json();
+      if (data.category) {
+        state.category = data.category;
+
+      }
+    } catch (error) {
+      console.error('Error checking category:', error);
+    }
+  }
+
 }
 
 function updateStats() {
@@ -426,8 +547,9 @@ document.addEventListener('keydown', (event) => {
       groupInput.value = category;
       const categoryDisplay = document.getElementById('category-display');
       if (categoryDisplay) {
-        categoryDisplay.textContent = `Catégorie actuelle : ${category}`;
+        categoryDisplay.textContent = `Catégorie actuelle : ${state.category}`;
       }
+      updateCategory();
     }
     console.log('Catégorie sélectionnée via pavé numérique:', category);
   }
@@ -436,8 +558,8 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
     const currentCategory = parseInt(state.category) || 0;
     const newCategory = event.key === 'ArrowUp' ? 
-      (currentCategory + 1) % 10 : // Incrémente et boucle à 0 si > 9
-      (currentCategory - 1 + 10) % 10; // Décrémente et boucle à 9 si < 0
+      (currentCategory + 1)  : // Incrémente et boucle à 0 si > 9
+      (currentCategory - 1 ) ; // Décrémente et boucle à 9 si < 0
     
     state.category = newCategory.toString();
     const groupInput = document.getElementById('group-input');
@@ -447,7 +569,8 @@ document.addEventListener('keydown', (event) => {
       if (categoryDisplay) {
         categoryDisplay.textContent = `Catégorie actuelle : ${state.category}`;
       }
-    }
+      updateCategory();
+      }
     console.log('Catégorie modifiée via flèches:', state.category);
   }
   
@@ -460,6 +583,9 @@ document.addEventListener('keydown', (event) => {
 document.addEventListener('DOMContentLoaded', () => {
   updateImages();
   
+  // Category selection
+  
+
   document.querySelector('.validate-button').onclick = (e) => {
     e.preventDefault();
     state.stats.imagesValidees++;

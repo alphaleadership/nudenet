@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Slideshow - Galerie de photos</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: #fff;
+    }
+    
+    h1 {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      color: #fff;
+      font-size: 24px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .slideshow-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .image-container {
+      width: 90%;
+      height: 90%;
+      max-width: 1920px;
+      max-height: 1080px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .current-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transition: opacity 0.3s ease;
+    }
+
+    .nav-button {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0,0,0,0.8);
+      color: #00ff00;
+      border: 2px solid #00ff00;
+      padding: 20px;
+      cursor: pointer;
+      border-radius: 50%;
+      font-size: 24px;
+      z-index: 100;
+      transition: all 0.3s ease;
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .slideshow-container:hover .nav-button {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .nav-button:hover {
+      background: #00ff00;
+      color: #000;
+    }
+
+    .prev { left: 30px; }
+    .next { right: 30px; }
+
+    .info-panel {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: rgba(0,0,0,0.8);
+      border: 2px solid #00ff00;
+      padding: 15px;
+      border-radius: 10px;
+      z-index: 100;
+      font-size: 16px;
+      color: #00ff00;
+    }
+
+    #dir-info {
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+
+  </style>
+</head>
+<body>
+  <h1>Slideshow - Galerie de photos</h1>
+  <div class="slideshow-container">
+    <button class="nav-button prev" onclick="navigate('prev')">❮</button>
+    <div class="image-container">
+      <img id="current-image" class="current-image" src="" alt="Current image">
+    </div>
+    <button class="nav-button next" onclick="navigate('next')">❯</button>
+  </div>
+  <div class="info-panel" id="info-panel">
+    <div id="dir-info"></div>
+    <div id="image-info"></div>
+    <div id="position-info"></div>
+  </div>
+
+    <script>
+    let currentPosition = 0;
+    const files = '<%= files %>'.split(',');
+    const dir = '<%= dir %>';
+    let totalImages = files.length;
+
+    function navigate(direction) {
+      const gallery = document.querySelector('.slideshow-container');
+      const image = document.getElementById('current-image');
+      const navButtons = document.querySelectorAll('.nav-button');
+      const infoPanel = document.getElementById('info-panel');
+
+      // Calculate new position
+      let newPosition = direction === 'next' ? currentPosition + 1 : currentPosition - 1;
+      if (newPosition < 0) newPosition = 0;
+      if (newPosition >= totalImages) newPosition = totalImages - 1;
+
+      // Show loading animation
+      image.style.opacity = '0.5';
+      navButtons.forEach(button => button.style.opacity = '0.5');
+      infoPanel.style.opacity = '0.5';
+
+      // Update image and info
+      const currentFile = files[newPosition];
+      image.src = `/good/${dir}/${currentFile}`;
+      
+      // Update info panel
+      document.getElementById('dir-info').textContent = `Directory: ${dir}`;
+      document.getElementById('image-info').textContent = currentFile;
+      document.getElementById('position-info').textContent = `Image ${newPosition + 1} / ${totalImages}`;
+
+      // Reset opacity
+      image.style.opacity = '1';
+      navButtons.forEach(button => button.style.opacity = '1');
+      infoPanel.style.opacity = '1';
+
+      // Update current position
+      currentPosition = newPosition;
+    }
+
+    // Initialize first image
+    if (files.length > 0) {
+      const currentFile = files[currentPosition];
+      document.getElementById('current-image').src = `/good/${dir}/${currentFile}`;
+      document.getElementById('dir-info').textContent = `Directory: ${dir}`;
+      document.getElementById('image-info').textContent = currentFile;
+      document.getElementById('position-info').textContent = `Image ${currentPosition + 1} / ${totalImages}`;
+    } else {
+      document.getElementById('current-image').style.display = 'none';
+      document.getElementById('info-panel').textContent = 'No images available';
+    }
+
+    // Add keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') navigate('prev');
+      if (e.key === 'ArrowRight') navigate('next');
+    });
+
+  
+    
+  </script>
+</body>
+</html>

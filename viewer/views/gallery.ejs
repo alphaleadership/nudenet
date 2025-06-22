@@ -9,6 +9,22 @@
             padding: 20px;
             background-color: #f5f5f5;
         }
+        .original-link {
+            margin-top: 10px;
+            text-align: center;
+        }
+        .link-button {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .link-button:hover {
+            background-color: #45a049;
+        }
         /* Modal styles */
         .modal {
             display: none;
@@ -183,12 +199,17 @@
                     <div class="image-grid">
                         <% folder.images.forEach(image => { %>
                             <div class="image-item">
-                                <img 
-                                    src="<%= image %>" 
-                                    alt="<%= folder.folder %> image"
-                                    data-folder="<%= folder.folder %>"
-                                    data-image="<%= image %>"
-                                >
+                                <div class="image-container">
+                                    <img src="<%= image.path %>" alt="<%= image.path %>" class="gallery-image">
+                                </div>
+                                <div class="image-info">
+                                    <span class="image-name"><%= image.path %></span>
+                                    <% if (image.originalLink) { %>
+                                        <div class="original-link">
+                                            <a href="<%= image.originalLink %>" target="_blank" class="link-button">Lien original</a>
+                                        </div>
+                                    <% } %>
+                                </div>
                             </div>
                         <% }); %>
                     </div>
