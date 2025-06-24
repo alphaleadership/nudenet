@@ -101,7 +101,7 @@ function updateDownloadsOnMove(oldPath, newPath) {
       
       // Find and update the record with the old path
       const updatedDownloads = downloads.map(download => {
-        console.log(download)
+      //  console.log(download)
         if (download.localPath === oldPath) {
           return { ...download, localPath: newPath};
         }else{
@@ -159,6 +159,47 @@ function removeDownloadEntry(filePath) {
 const imageDirectory = path.join(__dirname, '../media');
 const goodDirectory = path.join(__dirname, '../good');
 const delDirectory = path.join(__dirname, '../del');
+
+// Get all directories route
+router.get('/directories', (req, res) => {
+  try {
+    const allDirs = fs.readdirSync(goodDirectory).filter(dir => 
+      fs.statSync(path.join(goodDirectory, dir)).isDirectory()
+    );
+    
+    // Sort directories alphabetically
+    allDirs.sort();
+    
+    res.json({ directories: allDirs });
+  } catch (error) {
+    console.error('Error getting directories:', error);
+    res.status(500).json({ error: 'Error getting directories' });
+  }
+});
+
+// Get next directory route
+router.get('/next-directory/:currentDir', (req, res) => {
+  try {
+    const currentDir = req.params.currentDir;
+    const allDirs = fs.readdirSync(goodDirectory).filter(dir => 
+      fs.statSync(path.join(goodDirectory, dir)).isDirectory()
+    );
+    
+    // Sort directories alphabetically
+    allDirs.sort();
+    
+    // Find current index and get next directory
+    const currentIndex = allDirs.indexOf(currentDir);
+    const nextIndex = currentIndex < allDirs.length - 1 ? currentIndex + 1 : 0;
+    const nextDir = allDirs[nextIndex];
+    
+    res.json({ nextDir });
+  } catch (error) {
+    console.error('Error getting next directory:', error);
+    res.status(500).json({ error: 'Error getting next directory' });
+  }
+});
+
 const urlsDir = path.join(__dirname, '../accepted_urls');
 const logDirectory = path.join(__dirname, '../logs');
 
@@ -859,6 +900,20 @@ router.get('/imagedata/:position', (req, res) => {
       if (fs.existsSync(imagePath)) {
         const stats = fs.statSync(imagePath);
         imageSize = stats.size;
+      }
+      try {
+        findMatchingLinks(require("../downloads.json").downloads.filter((item) => item.localPath === imagePath)[0].originalLink)[0].fileName.split('.')[0]
+      } catch (error) {
+        const link = linkManager.getLink();
+        if (link) {
+          linkManager.removeLink(link);
+          logOperation('deleteLink', startTime, { link });
+        } else { 
+          logOperation('deleteLink_notFound', startTime);
+        }
+        console.error('Error getting image data:', error);
+        logOperation('imagedata_error', startTime, { error: error.message });
+        return res.status(500).send('Server error');
       }
 
       imageInfo = {

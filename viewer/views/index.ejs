@@ -416,19 +416,19 @@ function updateProgressBars() {
 }
 
 // Mise à jour de l'image
-function updateImage(imageUrl) {
+const updateImage = (imageUrl) => {
   document.getElementById('current-image').src = imageUrl;
 }
 
 // Gestion des images
-function navigateImage(direction) {
+const navigateImage = (direction) => {
   state.currentId += direction;
   state.stats.processedImages++;
   updateImages();
   updateStats();
 }
-
-function updateImages() {
+const updateImages = async () => {
+  let error=false;
   fetch(`/imagedata/${state.currentId}`)
     .then(response => response.json())
     .then(data => {
@@ -438,29 +438,10 @@ function updateImages() {
       document.getElementById('compteur-images').textContent = data.nb;
     })
     .catch(error => {
+      error=true;
       console.error('Erreur lors du chargement de l\'image:', error);
       // Supprimer l'image actuelle
-      const currentImage = document.getElementById('current-image');
-      currentImage.src = '';
-      // Effectuer la suppression via API
-      fetch(`/delete/${state.currentId}`, {
-        method: 'DELETE'
-      })
-      .then(response => {
-        if (!response.ok) {
-          console.error('Erreur lors de la suppression:', response.status);
-        }
-      })
-      .catch(deleteError => {
-        console.error('Erreur lors de la suppression:', deleteError);
-      })
-      .finally(() => {
-        // Passer à l'image suivante
-        state.currentId++;
-navigateImage(1);
-      });
     })
-    .catch(console.error);
 }
 
 async function updateImageInfo(imageData) {

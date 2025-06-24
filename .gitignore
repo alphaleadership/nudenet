@@ -41,3 +41,7 @@ viewer/categories.json
 viewer/combined.log
 viewer/downloads.json
 viewer/logs/operations_2025-06-18.log
+viewer/combined.log
+viewer/directory-stats.csv
+viewer/directory-stats.html
+viewer/directory-stats.txt

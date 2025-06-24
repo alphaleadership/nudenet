@@ -39,11 +39,22 @@ async function saveCategories(categories) {
  */
 async function getCategory(account) {
     const categories = await loadCategories();
-    console.log(categories[account]);
-    if(!categories[account]){
-        await setCategory(account, categories.length);
+    
+    // If account has no category, assign a default category based on the length
+    if (!categories[account]) {
+        // Get all existing category numbers
+        const existingCategories = Object.values(categories).map(Number);
+        
+        // Find the next available category number
+        let nextCategory = 1;
+        while (existingCategories.includes(nextCategory)) {
+            nextCategory++;
+        }
+        
+        // Set the category for this account
+        await setCategory(account, nextCategory.toString());
     }
-    console.log(categories[account]);
+    
     return categories[account];
 }
 
