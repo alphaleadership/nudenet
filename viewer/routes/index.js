@@ -11,10 +11,10 @@ const { getCategory, setCategory, removeCategory, loadCategories } = require('..
 const categoryRouter = express.Router();
 
 // Get category for an account
-categoryRouter.get('/:account', async (req, res) => {
+categoryRouter.get('/:account', (req, res) => {
   try {
     const account = req.params.account;
-    const category = await getCategory(account);
+    const category = getCategory(account);
     console.log(category);
     res.json({ category });
   } catch (error) {
@@ -24,11 +24,11 @@ categoryRouter.get('/:account', async (req, res) => {
 });
 
 // Set category for an account
-categoryRouter.post('/:account', async (req, res) => {
+categoryRouter.post('/:account', (req, res) => {
   try {
     const account = req.params.account;
     const { category } = req.body;
-    await setCategory(account, category);
+    setCategory(account, category);
     res.json({ success: true });
   } catch (error) {
     console.error('Error setting category:', error);
@@ -37,10 +37,10 @@ categoryRouter.post('/:account', async (req, res) => {
 });
 
 // Remove category for an account
-categoryRouter.delete('/:account', async (req, res) => {
+categoryRouter.delete('/:account', (req, res) => {
   try {
     const account = req.params.account;
-    await removeCategory(account);
+    removeCategory(account);
     res.json({ success: true });
   } catch (error) {
     console.error('Error removing category:', error);
@@ -256,17 +256,17 @@ class LinkManager {
    */
   loadLinks() {
     const startTime = Date.now();
-  try {
+    try {
       const linkData = fs.readFileSync(this.linkFile, 'utf8');
       this.links = [...new Set(linkData.split('\n')
         .filter(line => line !== '\r')
         .filter(Boolean))]
         .sort((a, b) => a.localeCompare(b));
       logOperation('loadLinks', startTime, { count: this.links.length });
-  } catch (err) {
+    } catch (err) {
       console.error('Error loading links:', err);
       logOperation('loadLinks_error', startTime, { error: err.message });
-  }
+    }
   }
 
   /**
@@ -379,7 +379,7 @@ function regroupFiles(files) {
     inputCount: files.length,
     outputCount: result.length,
     categories: Object.keys(fileGroups).length
-});
+  });
   return result;
 }
 
@@ -410,13 +410,13 @@ function checkAndSwitchMode() {
 }
 
 // Function to get gallery data
-async function getGalleryData() {
+function getGalleryData() {
   try {
-    const folders = await fs.promises.readdir(goodDirectory);
-    const foldersData = await Promise.all(folders.map(async folder => {
+    const folders = fs.readdirSync(goodDirectory);
+    const foldersData = folders.map(folder => {
       const folderPath = path.join(goodDirectory, folder);
-      if ((await fs.promises.stat(folderPath)).isDirectory()) {
-        const images = await fs.promises.readdir(folderPath);
+      if (fs.statSync(folderPath).isDirectory()) {
+        const images = fs.readdirSync(folderPath);
         const imagePaths = images.map(img => {
           const fullPath = path.join(folderPath, img);
           const originalLink = getOriginalLinkFromDownloads(fullPath);
@@ -443,7 +443,7 @@ async function getGalleryData() {
         return { folder, images: imagePaths };
       }
       return null;
-    }));
+    });
     return foldersData.filter(Boolean);
   } catch (error) {
     console.error('Error getting gallery data:', error);
@@ -632,9 +632,7 @@ router.get('/image/:position', (req, res) => {
     }
 
     const position = parseInt(req.params.position);
-    console.log(position)
-    //console.table(regroupedFiles)
-    if (position >= 0 ) {
+    if (position >= 0) {
       const selectedFile = regroupedFiles[0];
       const filePath = path.join(imageDirectory, selectedFile);
       
@@ -656,9 +654,6 @@ router.get('/image/:position', (req, res) => {
       res.status(404).send('Image not found');
       logOperation('image_not_found', startTime, { position });
     }
-
-    //res.sendFile(imagePath);
-   
   } catch (err) {
     console.error('Error reading image directory:', err);
     logOperation('image_error', startTime, { error: err.message });
@@ -686,7 +681,7 @@ router.get('/move/:position/:groupe', (req, res) => {
       const imagePath = path.join(imageDirectory, imageName);
       const category = imageName.split("-")[0];
       const groupe = req.params.groupe;
-      console
+
       // Créer le dossier du groupe s'il n'existe pas
       const groupeDir = path.join(goodDirectory, groupe);
       if (!fs.existsSync(groupeDir)) {
@@ -772,35 +767,30 @@ router.get('/move/:position/:groupe', (req, res) => {
       try {
         saveDownloadInfo(newFilePath, link);
         const curlCommand = `curl -o "${newFilePath}" "${link}"`;
-      const curlStartTime = Date.now();
-      exec(curlCommand, (error) => {
-        if (error) {
-          console.error(`Download error: ${error}`);
-          logOperation('downloadImage_error', curlStartTime, {
-            link,
-            error: error.message,
-            groupe
-          });
-        } else {
-          logOperation('downloadImage', curlStartTime, {
-            link,
-            filePath: newFilePath,
-            groupe
-          });
-        }
-      });
-      
-      linkManager.removeLink(link);
-      fileCount[category] = existingCount;
-      } catch (error) {
+        exec(curlCommand, (error) => {
+          if (error) {
+            console.error(`Download error: ${error}`);
+            logOperation('downloadImage_error', startTime, {
+              link,
+              error: error.message,
+              groupe
+            });
+          } else {
+            logOperation('downloadImage', startTime, {
+              link,
+              filePath: newFilePath,
+              groupe
+            });
+          }
+        });
         
-      linkManager.removeLink(link);
-      fileCount[category] = existingCount;
+        linkManager.removeLink(link);
+        fileCount[category] = existingCount;
+      } catch (error) {
+        linkManager.removeLink(link);
+        fileCount[category] = existingCount;
         console.error('Error saving download info:', error);
       }
-      // Télécharger l'image
-      
-
 
       if (linkManager.getLinks().length === 0) {
         mode = 'image';
@@ -885,7 +875,7 @@ router.get('/imagedata/:position', (req, res) => {
       const files = fs.readdirSync(imageDirectory).filter(file => {
         const fullPath = path.join(imageDirectory, file);
         return fs.statSync(fullPath).isFile();
-      });;
+      });
       const regroupedFiles = regroupFiles(files);
 
       if (!regroupedFiles || regroupedFiles.length === 0) {
@@ -901,8 +891,29 @@ router.get('/imagedata/:position', (req, res) => {
         const stats = fs.statSync(imagePath);
         imageSize = stats.size;
       }
+
       try {
-        findMatchingLinks(require("../downloads.json").downloads.filter((item) => item.localPath === imagePath)[0].originalLink)[0].fileName.split('.')[0]
+        const downloadsData = require("../downloads.json").downloads;
+        const download = downloadsData.find(item => item.localPath === imagePath);
+        const account = download ? findMatchingLinks(download.originalLink)[0].fileName.split('.')[0] : null;
+        const originalLink = download ? download.originalLink : null;
+
+        imageInfo = {
+          nom: imageName,
+          taille: imageSize,
+          nb: regroupedFiles.length,
+          src: `/image/${regroupedFiles.length}`,
+          link: `/image/${regroupedFiles.length}`,
+          alt: imageName,
+          title: imageName,
+          account: account,
+          originalLink: originalLink
+        };
+        logOperation('getImageData', startTime, {
+          imageName,
+          imageSize,
+          totalImages: regroupedFiles.length
+        });
       } catch (error) {
         const link = linkManager.getLink();
         if (link) {
@@ -916,22 +927,6 @@ router.get('/imagedata/:position', (req, res) => {
         return res.status(500).send('Server error');
       }
 
-      imageInfo = {
-        nom: imageName,
-        taille: imageSize,
-        nb: regroupedFiles.length,
-        src: `/image/${regroupedFiles.length}`,
-        link: `/image/${regroupedFiles.length}`,
-        alt: imageName,
-        title: imageName,
-        account: findMatchingLinks(require("../downloads.json").downloads.filter((item) => item.localPath === imagePath)[0].originalLink)[0].fileName.split('.')[0],
-        originalLink: require("../downloads.json").downloads.filter((item) => item.localPath === imagePath)[0].originalLink
-      };
-      logOperation('getImageData', startTime, {
-        imageName,
-        imageSize,
-        totalImages: regroupedFiles.length
-      });
     } else if (mode === "lien") {
       const link = linkManager.getLink();
 
@@ -939,7 +934,7 @@ router.get('/imagedata/:position', (req, res) => {
         logOperation('imagedata_noLinkFound', startTime);
         return res.status(404).send('No link found');
       }
-      
+
       imageInfo = {
         nom: "Link",
         taille: link.length,
@@ -947,7 +942,7 @@ router.get('/imagedata/:position', (req, res) => {
         src: link,
         link: link,
         alt: "Link preview",
-        title: 'Link',
+        title: "Link",
         account: findMatchingLinks(link)[0].fileName.split('.')[0],
         originalLink: link
       };

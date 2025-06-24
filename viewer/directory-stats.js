@@ -13,7 +13,7 @@ try {
 function getCategoryForDir(dirName) {
     // Try to find an exact match
     for (const [key, value] of Object.entries(categories)) {
-        if (value === dirName) {
+        if (parseInt(value) === parseInt(dirName)) {
             return key;
         }
     }
@@ -21,7 +21,7 @@ function getCategoryForDir(dirName) {
     // Try to find a match without the trailing number
     const baseName = dirName.replace(/\d+$/, '');
     for (const [key, value] of Object.entries(categories)) {
-        if (value === baseName) {
+        if (parseInt(value) === parseInt(baseName)) {
             return key;
         }
     }
@@ -85,7 +85,7 @@ function printDirectoryTable(stats) {
     console.log('-'.repeat(40));
     
     stats.sort((a, b) => b.fileCount - a.fileCount).forEach(stat => {
-        console.log(stat.directory.padEnd(20) + stat.fileCount.toString().padStart(10) + stat.category);
+        console.log(stat.directory.padEnd(20) + stat.fileCount.toString().padStart(10) + stat.category.padStart(10) );
     });
     
     // Calculate and display total

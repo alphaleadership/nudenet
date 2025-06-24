@@ -5,9 +5,9 @@ const categoriesFile = path.join(__dirname, 'categories.json');
 
 /**
  * Loads the categories data from file
- * @returns {Promise<Object>} Categories data
+ * @returns {Object} Categories data
  */
-async function loadCategories() {
+function loadCategories() {
     try {
         if (!fs.existsSync(categoriesFile)) {
             fs.writeFileSync(categoriesFile, JSON.stringify({}, null, 2));
@@ -24,7 +24,7 @@ async function loadCategories() {
  * Saves the categories data to file
  * @param {Object} categories - Categories data to save
  */
-async function saveCategories(categories) {
+function saveCategories(categories) {
     try {
         fs.writeFileSync(categoriesFile, JSON.stringify(categories, null, 2));
     } catch (error) {
@@ -35,10 +35,10 @@ async function saveCategories(categories) {
 /**
  * Gets the category for an account
  * @param {string} account - Account name
- * @returns {Promise<string|null>} Category name or null if not found
+ * @returns {number|null} Category number or null if not found
  */
-async function getCategory(account) {
-    const categories = await loadCategories();
+function getCategory(account) {
+    const categories = loadCategories();
     
     // If account has no category, assign a default category based on the length
     if (!categories[account]) {
@@ -52,10 +52,11 @@ async function getCategory(account) {
         }
         
         // Set the category for this account
-        await setCategory(account, nextCategory.toString());
+        setCategory(account, nextCategory);
     }
     
-    return categories[account];
+    // Return category as number
+    return categories[account] ? Number(categories[account]) : null;
 }
 
 /**
@@ -63,20 +64,20 @@ async function getCategory(account) {
  * @param {string} account - Account name
  * @param {string} category - Category name
  */
-async function setCategory(account, category) {
-    const categories = await loadCategories();
+function setCategory(account, category) {
+    const categories = loadCategories();
     categories[account] = category;
-    await saveCategories(categories);
+    saveCategories(categories);
 }
 
 /**
  * Removes the category for an account
  * @param {string} account - Account name
  */
-async function removeCategory(account) {
-    const categories = await loadCategories();
+function removeCategory(account) {
+    const categories = loadCategories();
     delete categories[account];
-    await saveCategories(categories);
+    saveCategories(categories);
 }
 
 module.exports = {

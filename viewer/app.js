@@ -39,6 +39,23 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Serve files from good directory
 app.use('/good', express.static(path.join(__dirname, 'good')));
 
+// Route to get original image URL
+app.get('/get-original-url/:dir/:file', (req, res) => {
+  const { dir, file } = req.params;
+  try {
+    const downloads = require('./downloads.json');
+    const download = downloads.downloads.find(d => d.localPath === path.join(__dirname, 'good', dir, file));
+    if (download) {
+      res.json({ originalUrl: download.originalLink });
+    } else {
+      res.status(404).json({ error: 'Original URL not found' });
+    }
+  } catch (error) {
+    console.error('Error fetching original URL:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
