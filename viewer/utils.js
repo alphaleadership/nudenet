@@ -8,7 +8,7 @@ const path = require('path');
  * @returns {Object[]} Array of matching objects found in JSON files
  */
 function    findMatchingLinks(originalLink, jsonDir = 'C:\\Users\\alpha\\twitter') {
-    console.log(originalLink)
+    //console.log(originalLink)
     try {
         const matchingObjects = [];
         
@@ -34,9 +34,10 @@ function    findMatchingLinks(originalLink, jsonDir = 'C:\\Users\\alpha\\twitter
                 
                 if (matchingMedia.length > 0) {
                     // Add matching objects with their file name
-                    console.log(obj.compte)
+                    //console.log(obj.compte)
                     matchingObjects.push({
                         fileName: obj.compte,
+                        texte:obj.texte,
                         object: obj,
                         matchingMedia: matchingMedia
                     });

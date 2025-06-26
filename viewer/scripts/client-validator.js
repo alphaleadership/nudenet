@@ -157,7 +157,7 @@ async function main() {
         position++;
         
         // Délai avant de traiter la prochaine image
-        await new Promise(resolve => setTimeout(resolve, delayBetweenImages));
+        //await new Promise(resolve => setTimeout(resolve, delayBetweenImages));
         
         valid = await validateImage(position);
     }

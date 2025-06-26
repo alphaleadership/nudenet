@@ -178,14 +178,22 @@
         document.getElementById('position-info').textContent = `Image ${newPosition + 1} / ${totalImages}`;
 
         // Fetch original image URL from server
-        const response = await fetch(`/get-original-url/${dir}/${currentFile}`);
-        const data = await response.json();
-        
-        // Update original image link
         const originalLink = document.getElementById('original-link');
+     
+      const response =  fetch(`/get-original-url/${dir}/${currentFile}`).then(response => response.json()).then(data => {
         originalLink.href = data.originalUrl;
         originalLink.textContent = `Voir l'image originale (${currentFile})`;
+        const pTexte = document.getElementById('info-panel').querySelector('p.texte');
+        if (pTexte) {
+          pTexte.textContent = data.texte;
+        } else {
+          document.getElementById('info-panel').insertAdjacentHTML('beforeend', `<p class="texte">${data.texte}</p>`);
+        }
         originalLink.target = '_blank';
+      });
+        
+        // Update original image link
+       
 
         // Reset opacity
         image.style.opacity = '1';
@@ -206,7 +214,20 @@
 
     // Initialize first image
     if (files.length > 0) {
+      const originalLink = document.getElementById('original-link');
       const currentFile = files[currentPosition];
+      const response =  fetch(`/get-original-url/${dir}/${currentFile}`).then(response => response.json()).then(data => {
+        originalLink.href = data.originalUrl;
+        originalLink.textContent = `Voir l'image originale (${currentFile})`;
+        const pTexte = document.getElementById('info-panel').querySelector('p.texte');
+        if (pTexte) {
+          pTexte.textContent = data.texte;
+        } else {
+          document.getElementById('info-panel').insertAdjacentHTML('beforeend', `<p class="texte">${data.texte}</p>`);
+        }
+        originalLink.target = '_blank';
+      });
+      
       document.getElementById('current-image').src = `/good/${dir}/${currentFile}`;
       document.getElementById('dir-info').textContent = `Directory: ${dir}`;
       document.getElementById('image-info').textContent = currentFile;

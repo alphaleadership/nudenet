@@ -45,3 +45,4 @@ viewer/combined.log
 viewer/directory-stats.csv
 viewer/directory-stats.html
 viewer/directory-stats.txt
+viewer/.env

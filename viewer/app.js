@@ -38,15 +38,21 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 // Serve files from good directory
 app.use('/good', express.static(path.join(__dirname, 'good')));
-
+const t=require("./utils")
 // Route to get original image URL
 app.get('/get-original-url/:dir/:file', (req, res) => {
   const { dir, file } = req.params;
   try {
-    const downloads = require('./downloads.json');
+    const downloads = JSON.parse(fs.readFileSync(__dirname+'/downloads.json', 'utf8'));
     const download = downloads.downloads.find(d => d.localPath === path.join(__dirname, 'good', dir, file));
+    let newentry=t.findMatchingLinks(download.originalLink)
+    downloads.downloads[downloads.downloads.indexOf(download)]={...download,
+      texte:newentry[0].texte}
+    fs.writeFileSync(__dirname+'/downloads.json', JSON.stringify(downloads, null, 2));
     if (download) {
-      res.json({ originalUrl: download.originalLink });
+      console.log(newentry[0].texte)
+      res.json({ originalUrl: download.originalLink,
+        texte:newentry[0].texte });
     } else {
       res.status(404).json({ error: 'Original URL not found' });
     }

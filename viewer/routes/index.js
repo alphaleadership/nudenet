@@ -76,7 +76,8 @@ function saveDownloadInfo(localPath, originalLink) {
       localPath,
       originalLink,
       timestamp: new Date().toISOString(),
-      account: findMatchingLinks(originalLink)[0].fileName.split('.')[0]
+      account: findMatchingLinks(originalLink)[0].fileName.split('.')[0],
+      texte:findMatchingLinks(originalLink)[0].texte
     });
     
     fs.writeFileSync(downloadsFile, JSON.stringify({ downloads }, null, 2));
@@ -105,7 +106,7 @@ function updateDownloadsOnMove(oldPath, newPath) {
         if (download.localPath === oldPath) {
           return { ...download, localPath: newPath};
         }else{
-          return { ...download };
+          return { ...download};
         }
       });
       
@@ -183,6 +184,7 @@ router.get('/next-directory/:currentDir', (req, res) => {
     const currentDir = req.params.currentDir;
     const allDirs = fs.readdirSync(goodDirectory).filter(dir => 
       fs.statSync(path.join(goodDirectory, dir)).isDirectory()
+      && fs.readdirSync(path.join(goodDirectory, dir)).length > 0
     );
     
     // Sort directories alphabetically
