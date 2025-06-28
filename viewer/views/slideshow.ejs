@@ -184,10 +184,18 @@
         originalLink.href = data.originalUrl;
         originalLink.textContent = `Voir l'image originale (${currentFile})`;
         const pTexte = document.getElementById('info-panel').querySelector('p.texte');
-        if (pTexte) {
+       
+        if (pTexte) { 
           pTexte.textContent = data.texte;
         } else {
           document.getElementById('info-panel').insertAdjacentHTML('beforeend', `<p class="texte">${data.texte}</p>`);
+        }
+        const pAccount = document.getElementById('info-panel').querySelector('p.account');
+        console.log(data)
+        if (pAccount) {
+          pAccount.textContent = data.account;
+        } else {
+          document.getElementById('info-panel').insertAdjacentHTML('beforeend', `<p class="account">compte : ${data.account}</p>`);
         }
         originalLink.target = '_blank';
       });
@@ -224,6 +232,12 @@
           pTexte.textContent = data.texte;
         } else {
           document.getElementById('info-panel').insertAdjacentHTML('beforeend', `<p class="texte">${data.texte}</p>`);
+        }
+        const pAccount = document.getElementById('info-panel').querySelector('p.account');
+        if (pAccount) {
+          pAccount.textContent = data.account;
+        } else {
+          document.getElementById('info-panel').insertAdjacentHTML('beforeend', `<p class="account">compte : ${data.account}</p>`);
         }
         originalLink.target = '_blank';
       });

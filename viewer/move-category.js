@@ -1,4 +1,5 @@
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 
 async function moveCategory(categoryName) {
@@ -23,8 +24,9 @@ async function moveCategory(categoryName) {
         const files = await fs.readdir(sourcePath);
         for (const file of files) {
             const sourceFile = path.join(sourcePath, file);
-            const targetFile = path.join(__dirname, 'media', file.split('.')[0]+"-"+fs.readdir(sourcePath).length+path.extname(file));
-            
+
+            const targetFile = path.join(__dirname, 'media', file.split('.')[0].split('-')[0]+"-"+fs.readdir(sourcePath).length+path.extname(file));
+            console.log( fsSync.readdirSync(targetPath).length);
             // Vérifier si le fichier cible existe déjà
             const targetExists = await fs.access(targetFile).then(() => true).catch(() => false);
             if (targetExists) {
@@ -41,13 +43,13 @@ async function moveCategory(categoryName) {
                 return id;
             });
             // Déplacer le fichier
-            await fs.rename(sourceFile, targetFile);  
-            await fs.writeFile(downloadsPath, JSON.stringify(downloads, null, 2));
+            //await fs.rename(sourceFile, targetFile);  
+            //await fs.writeFile(downloadsPath, JSON.stringify(downloads, null, 2));
             console.log('downloads.json mis à jour avec succès');
         }
         
         // Supprimer le dossier vide source
-        await fs.rmdir(sourcePath);
+        //await fs.rmdir(sourcePath);
         console.log(`Contenu de ${categoryName} déplacé de ./good vers ./media`);
 
         // Lire et mettre à jour downloads.json

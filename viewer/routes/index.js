@@ -188,7 +188,13 @@ router.get('/next-directory/:currentDir', (req, res) => {
     );
     
     // Sort directories alphabetically
-    allDirs.sort();
+    allDirs.sort((a, b) => {
+      const dirA = parseInt(a.toLowerCase());
+      const dirB = parseInt(b.toLowerCase());
+      if (dirA < dirB) return -1;
+      if (dirA > dirB) return 1;
+      return 0;
+    });
     
     // Find current index and get next directory
     const currentIndex = allDirs.indexOf(currentDir);

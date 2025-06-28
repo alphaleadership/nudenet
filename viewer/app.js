@@ -50,9 +50,12 @@ app.get('/get-original-url/:dir/:file', (req, res) => {
       texte:newentry[0].texte}
     fs.writeFileSync(__dirname+'/downloads.json', JSON.stringify(downloads, null, 2));
     if (download) {
-      console.log(newentry[0].texte)
+      console.log({ originalUrl: download.originalLink,
+        texte:newentry[0].texte,
+        account:newentry[0].fileName})
       res.json({ originalUrl: download.originalLink,
-        texte:newentry[0].texte });
+        texte:newentry[0].texte,
+        account:newentry[0].fileName });
     } else {
       res.status(404).json({ error: 'Original URL not found' });
     }
