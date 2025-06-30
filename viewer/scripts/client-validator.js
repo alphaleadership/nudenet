@@ -5,7 +5,7 @@ const fs = require('fs');
 const baseUrl = 'http://localhost'; // URL du serveur Express
 const delayBetweenImages = 1000; // Délai en millisecondes entre chaque image
 const urlFilePath = 'C:\\Users\\alpha\\twitter\\urls.txt'; // Chemin du fichier à modifier
-const clean=require("../clean").dedup
+//const clean=require("../clean").dedup
 // Fonction pour obtenir les données de l'image
 function getImageData(position) {
     try {
@@ -97,7 +97,7 @@ function removeFirstLine() {
 // Fonction pour valider une image
 async function validateImage(position) {
     
-    clean()
+   // clean()
     try {
         console.log(`\nTraitement de l'image ${position}`);
         const imageData = await getImageData(position);

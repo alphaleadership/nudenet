@@ -397,7 +397,7 @@ function regroupFiles(files) {
 function checkAndSwitchMode() {
   const startTime = Date.now();
   const oldMode = mode;
-
+  console.log(linkManager.getLink())
   if (mode === 'image') {
     const files = fs.readdirSync(imageDirectory);
     const regroupedFiles = regroupFiles(files);
