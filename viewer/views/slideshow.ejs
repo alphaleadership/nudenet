@@ -133,11 +133,76 @@
 
     <script>
     let currentPosition = 0;
-    const files = '<%= files %>'.split(',');
     const dir = '<%= dir %>';
-    let totalImages = files.length;
+    let totalImages = 0;
+    let files = [];
+    const response =  fetch(`/get-image-count/${dir}`).then(response => response.json()).then(data => {
+        totalImages = data.files.length-1;
+        files = data.files.sort((a, b) => {
+          //console.log(a)
+          const numA = parseInt(a.split('.')[0].split('-')[1]);
+          const numB = parseInt(b.split('.')[0].split('-')[1]);
+          return numA - numB;
+        });
+        if (files.length > 0) {
+      const originalLink = document.getElementById('original-link');
+      const currentFile = files[currentPosition];
+      const response =  fetch(`/get-original-url/${dir}/${currentFile}`).then(response => response.json()).then(data => {
+        originalLink.href = data.originalUrl;
+        originalLink.textContent = `Voir l'image originale (${currentFile})`;
+        const pTexte = document.getElementById('info-panel').querySelector('p.texte');
+        if (pTexte) {
+          pTexte.textContent = data.texte;
+        } else {
+          document.getElementById('info-panel').insertAdjacentHTML('beforeend', `<p class="texte">${data.texte}</p>`);
+        }
+        const pAccount = document.getElementById('info-panel').querySelector('p.account');
+        if (pAccount) {
+          pAccount.textContent = data.account;
+        } else {
+          document.getElementById('info-panel').insertAdjacentHTML('beforeend', `<p class="account">compte : ${data.account}</p>`);
+        }
+        originalLink.target = '_blank';
+      });
+      
+      document.getElementById('current-image').src = `/good/${dir}/${currentFile}`;
+      document.getElementById('dir-info').textContent = `Directory: ${dir}`;
+      document.getElementById('image-info').textContent = currentFile;
+      document.getElementById('position-info').textContent = `Image ${currentPosition } / ${totalImages}`;
+    } else {
+      document.getElementById('current-image').style.display = 'none';
+      document.getElementById('info-panel').textContent = 'No images available';
+    }
+    });
+    // Add keyboard navigation
+    
 
-    async function navigate(direction) {
+    // Function to jump to the last image
+    function navigateToEnd() {
+      currentPosition = totalImages - 2;
+      navigate('next');
+    }
+
+    async function updateImageCount() {
+      try {
+        const response = await fetch(`/get-image-count/${dir}`);
+        const data = await response.json();
+        totalImages = data.files.length-1;
+        files = data.files.sort((a, b) => {
+          const numA = parseInt(a.split('.')[0].split('-')[1]);
+          const numB = parseInt(b.split('.')[0].split('-')[1]);
+          return numA - numB;
+        });
+        document.getElementById('position-info').textContent = `Image ${currentPosition + 1} / ${totalImages}`;
+      } catch (error) {
+        console.error('Error updating image count:', error);
+      }
+    }
+    
+    async function navigate(direction, step = 1) {
+      // Mettre à jour le hash avec la nouvelle position
+      window.location.hash = currentPosition;
+      
       const gallery = document.querySelector('.slideshow-container');
       const image = document.getElementById('current-image');
       const navButtons = document.querySelectorAll('.nav-button');
@@ -149,7 +214,7 @@
       infoPanel.style.opacity = '0.5';
 
       try {
-        if (direction === 'next' && currentPosition === totalImages - 1) {
+        if (direction === 'next' && currentPosition === totalImages ) {
           // If at last image, fetch next directory
           const response = await fetch('/next-directory/' + dir);
           const data = await response.json();
@@ -163,10 +228,10 @@
           }
         }
 
-        // Calculate new position
-        let newPosition = direction === 'next' ? currentPosition + 1 : currentPosition - 1;
-        if (newPosition < 0) newPosition = 0;
-        if (newPosition >= totalImages) newPosition = totalImages - 1;
+        // Calculate new position with step parameter
+        let newPosition = direction === 'next' ? currentPosition + step : currentPosition - step;
+        if (newPosition < 0) newPosition = 0; 
+        if (newPosition >= totalImages+1) newPosition = totalImages;
 
         // Update image and info
         const currentFile = files[newPosition];
@@ -175,7 +240,10 @@
         // Update info panel
         document.getElementById('dir-info').textContent = `Directory: ${dir}`;
         document.getElementById('image-info').textContent = currentFile;
-        document.getElementById('position-info').textContent = `Image ${newPosition + 1} / ${totalImages}`;
+        document.getElementById('position-info').textContent = `Image ${newPosition } / ${totalImages}`;
+        
+        // Update the image count
+        await updateImageCount();
 
         // Fetch original image URL from server
         const originalLink = document.getElementById('original-link');
@@ -221,41 +289,47 @@
     }
 
     // Initialize first image
-    if (files.length > 0) {
-      const originalLink = document.getElementById('original-link');
-      const currentFile = files[currentPosition];
-      const response =  fetch(`/get-original-url/${dir}/${currentFile}`).then(response => response.json()).then(data => {
-        originalLink.href = data.originalUrl;
-        originalLink.textContent = `Voir l'image originale (${currentFile})`;
-        const pTexte = document.getElementById('info-panel').querySelector('p.texte');
-        if (pTexte) {
-          pTexte.textContent = data.texte;
-        } else {
-          document.getElementById('info-panel').insertAdjacentHTML('beforeend', `<p class="texte">${data.texte}</p>`);
-        }
-        const pAccount = document.getElementById('info-panel').querySelector('p.account');
-        if (pAccount) {
-          pAccount.textContent = data.account;
-        } else {
-          document.getElementById('info-panel').insertAdjacentHTML('beforeend', `<p class="account">compte : ${data.account}</p>`);
-        }
-        originalLink.target = '_blank';
-      });
-      
-      document.getElementById('current-image').src = `/good/${dir}/${currentFile}`;
-      document.getElementById('dir-info').textContent = `Directory: ${dir}`;
-      document.getElementById('image-info').textContent = currentFile;
-      document.getElementById('position-info').textContent = `Image ${currentPosition + 1} / ${totalImages}`;
-    } else {
-      document.getElementById('current-image').style.display = 'none';
-      document.getElementById('info-panel').textContent = 'No images available';
-    }
+  
 
     // Add keyboard navigation
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowLeft') navigate('prev');
-      if (e.key === 'ArrowRight') navigate('next');
+      switch(e.key) {
+        case 'ArrowUp':
+          navigate('prev', 10);
+          break;
+        case 'ArrowDown':
+          navigate('next', 10);
+          break;
+        case 'f':
+          navigateToEnd();
+          break;
+        case "ArrowLeft":
+          navigate('prev');
+          break;
+        case "ArrowRight":
+          navigate('next');
+          break;
+      }
     });
+
+    // Gestion du hash
+    function handleHashChange() {
+      const hash = window.location.hash.substring(1);
+      console.log(hash)
+      if (hash) {
+        const position = parseInt(hash);
+        if (!isNaN(position) && position >= 0 && position <= totalImages) {
+          currentPosition = position;
+          navigate('next');
+        }
+      }
+    }
+
+    // Vérifier le hash au chargement de la page
+    handleHashChange();
+    
+    // Écouter les changements de hash
+    window.addEventListener('hashchange', handleHashChange);
 
   
     

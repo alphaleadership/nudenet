@@ -6,8 +6,9 @@ const path = require('path');
  * @param {string} originalLink - The original link to search for
  * @param {string} jsonDir - Directory containing JSON files
  * @returns {Object[]} Array of matching objects found in JSON files
- */
+ */ 
 function    findMatchingLinks(originalLink, jsonDir = 'C:\\Users\\alpha\\twitter') {
+    console.log(originalLink)
     //console.log(originalLink)
     try {
         const matchingObjects = [];
@@ -29,12 +30,12 @@ function    findMatchingLinks(originalLink, jsonDir = 'C:\\Users\\alpha\\twitter
                 // Search through media array for matching links
                 //console.log(obj.media)
                 const matchingMedia = obj.media.filter(media => 
-                    media.lien === originalLink 
+                    media.media_object.media_url === originalLink 
                 );
                 
                 if (matchingMedia.length > 0) {
                     // Add matching objects with their file name
-                    //console.log(obj.compte)
+                    console.log(obj.compte)
                     matchingObjects.push({
                         fileName: obj.compte,
                         texte:obj.texte,
@@ -43,8 +44,8 @@ function    findMatchingLinks(originalLink, jsonDir = 'C:\\Users\\alpha\\twitter
                     });
                 }
             }
-        }
-        
+        };
+        console.log(matchingObjects)
         return matchingObjects;
     } catch (error) {
         console.error('Error searching tweet.json:', error);

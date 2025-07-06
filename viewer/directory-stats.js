@@ -70,7 +70,7 @@ function getDirectoryStats(baseDir) {
                 });
             }
         }
-        
+        console.log(stats)
         return stats;
     } catch (error) {
         console.error('Error getting directory stats:', error);
@@ -83,6 +83,7 @@ function printDirectoryTable(stats) {
     console.log('\nDirectory Statistics:\n');
     console.log('Directory'.padEnd(20) + 'File Count'.padEnd(10) + 'Category');
     console.log('-'.repeat(40));
+    console.log(stats)
     
     stats.sort((a, b) => b.fileCount - a.fileCount).forEach(stat => {
         console.log(stat.directory.padEnd(20) + stat.fileCount.toString().padStart(10) + stat.category.padStart(10) );
@@ -129,14 +130,73 @@ function printDirectoryTable(stats) {
                 background-color: #ddd;
             }
         </style>
+        <script>
+            function sortTable(column) {
+                const table = document.querySelector('table');
+                const rows = Array.from(table.rows).slice(1); // Exclude header row
+                
+                // Toggle sort direction
+                const sortDirection = column in window.sortDirections ? !window.sortDirections[column] : true;
+                window.sortDirections[column] = sortDirection;
+                
+                // Sort rows
+                rows.sort((a, b) => {
+                    const aValue = a.cells[column].textContent;
+                    const bValue = b.cells[column].textContent;
+                    
+                    // First two columns are numeric
+                    if (column === 0 || column === 1) {
+                        return sortDirection 
+                            ? parseInt(aValue) - parseInt(bValue) 
+                            : parseInt(bValue) - parseInt(aValue);
+                    }
+                    
+                    return sortDirection ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+                });
+                
+                // Clear table body
+                const tbody = table.querySelector('tbody') || table;
+                const headerRow = tbody.querySelector('tr');
+                tbody.innerHTML = '';
+                
+                // Add header row back
+                if (headerRow) {
+                    tbody.appendChild(headerRow);
+                }
+                
+                // Add sorted rows back
+                rows.forEach(row => tbody.appendChild(row));
+                
+                // Update header arrows
+                const headers = table.querySelectorAll('th');
+                headers.forEach((header, i) => {
+                    const arrow = header.querySelector('.arrow');
+                    if (arrow) arrow.remove();
+                    if (i === column) {
+                        const arrow = document.createElement('span');
+                        arrow.className = 'arrow';
+                        arrow.textContent = sortDirection ? '↑' : '↓';
+                        header.appendChild(arrow);
+                    }
+                });
+            }
+            
+            // Initialize sort directions
+            window.sortDirections = {};
+            
+            // Add arrow styles
+            const style = document.createElement('style');
+            style.textContent =  \`\n                .arrow {\n                    margin-left: 5px;\n                    font-size: 12px;\n                }\n            \`;
+            document.head.appendChild(style);
+        </script>
     </head>
     <body>
         <h1>Directory Statistics</h1>
         <table>
             <tr>
-                <th>Directory</th>
-                <th>File Count</th>
-                <th>Category</th>
+                <th onclick="sortTable(0)">Directory</th>
+                <th onclick="sortTable(1)">File Count</th>
+                <th onclick="sortTable(2)">Category</th>
             </tr>
             ${stats.map(stat => `
                 <tr>
@@ -170,6 +230,9 @@ function main() {
         // Get directory statistics
         var stats = getDirectoryStats(baseDir);
         console.log(`Found ${stats.length} subdirectories`);
+        
+        // Add test data for sorting verification
+        
         
         // Prin t the results
         printDirectoryTable(stats);

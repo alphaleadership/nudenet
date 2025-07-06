@@ -196,7 +196,7 @@ const dedup = (...paths) => {
     // Retourner uniquement les chemins de fichiers (sans les métadonnées)
     return allFiles.filter(item => item !== null).map(item => item.path);
 }
-dedup('C:\\Users\\alpha\\cache\\cache_files\\pbs.twimg.com',"C:\\Mes Sites Web\\cache\\pbs.twimg.com\\media","C:\\Users\\alpha\\ia\\viewer\\media","C:\\Users\\alpha\\ia\\viewer\\good","C:\\Users\\alpha\\twitter\\video")
+dedup('C:\\Users\\alpha\\cache\\cache_files\\pbs.twimg.com',"C:\\Mes Sites Web\\cache\\pbs.twimg.com\\media","C:\\Users\\alpha\\twitter\\video")
 module.exports = { dedup: (paths=[]) => dedup('C:\\Users\\alpha\\cache\\cache_files\\pbs.twimg.com',"C:\\Mes Sites Web\\cache\\pbs.twimg.com\\media", ...paths) };
 function transferImages(srcDir, destDir) {
     const fs = require('fs');

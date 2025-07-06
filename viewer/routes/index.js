@@ -245,6 +245,7 @@ function logOperation(operation, startTime, additionalInfo = {}) {
   fs.appendFileSync(logPath, JSON.stringify(logEntry) + '\n');
   console.log(`[LOG] ${operation} - ${duration}ms`, additionalInfo);
 }
+exports.logOperation = logOperation;
 
 /**
  * Manages links from a file
@@ -875,6 +876,7 @@ router.get('/imagedata/:position', (req, res) => {
   const startTime = Date.now();
   try {
     linkManager.loadLinks();
+    //mode="image"
     checkAndSwitchMode();
 
     let imageInfo = {};

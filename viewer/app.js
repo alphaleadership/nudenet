@@ -68,6 +68,21 @@ app.get('/get-original-url/:dir/:file', (req, res) => {
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
+// Route to get number of images and list of files in a directory
+app.get('/get-image-count/:dir', (req, res) => {
+  const dir = req.params.dir;
+  try {
+    const files = fs.readdirSync(path.join(__dirname, 'good', dir));
+    res.json({ 
+      count: files.length + 1,
+      files: files
+    });
+  } catch (error) {
+    console.error('Error getting image count:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
